@@ -8,6 +8,7 @@ import (
 // Config holds the application configuration
 type Config struct {
 	RabbitMQURL string `env:"RABBIT_URL, default=amqp://guest:guest@rabbitmq:5672/"`
+	NatsURL     string `env:"NATS_URL, default=natsURL"`
 	BrokerType  string `env:"BROKER_TYPE, default=kafka"`
 	EmailFrom   string `env:"EMAIL_FROM, default=EMAIL_FROM"`
 	EmailPass   string `env:"EMAIL_PASS, default=EMAIL_PASS"`

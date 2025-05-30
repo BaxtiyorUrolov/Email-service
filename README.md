@@ -7,6 +7,7 @@ Bu loyiha orqali siz RabbitMQ yoki Kafka brokerlari yordamida email yuborish xiz
 * Go (Golang)
 * RabbitMQ
 * Kafka
+* Nats
 * Gmail SMTP
 
 ---
@@ -19,7 +20,7 @@ Email-service/
 │   ├── email-service/        # Consumer servis (email yuboradi)
 │   └── producer/             # Email so'rovi jo'natuvchi (publisher)
 ├── internal/
-│   ├── broker/               # RabbitMQ va Kafka brokerlar
+│   ├── broker/               # RabbitMQ, Kafka va Nats brokerlar
 │   ├── config/               # Konfiguratsiya yuklash
 │   └── email/                # Email yuborish logikasi
 ├── .env.example              # Muqobil .env fayl
@@ -35,9 +36,11 @@ Email-service/
 
 ```
 RABBIT_URL=amqp://guest:guest@localhost:5672/
-BROKER_TYPE=rabbit # yoki kafka
-EMAIL_FROM=youremail@gmail.com
-EMAIL_PASS=yourapppassword
+NATS_URL=nats://localhost:4222
+#rabbit, kafka or nats
+BROKER_TYPE=BrokerType
+EMAIL_FROM=EmailFrom
+EMAIL_PASS=EmailPass
 ```
 
 > **Eslatma:** `EMAIL_PASS` uchun Gmail App Password ishlatilishi kerak.
@@ -66,6 +69,12 @@ export $(cat .env) && go run cmd/producer/main.go --broker=kafka
 export $(cat .env) && go run cmd/producer/main.go --broker=rabbit
 ```
 
+#### Nats orqali:
+
+```bash
+export $(cat .env) && go run cmd/producer/main.go --broker=nats
+```
+
 ---
 
 ## 📦 Brokerlar
@@ -75,7 +84,16 @@ export $(cat .env) && go run cmd/producer/main.go --broker=rabbit
 Agar Docker orqali Kafka o'rnatgan bo‘lsangiz:
 
 ```bash
-docker pull bitnami/kafka
+docker run -d --name zookeeper -p 2181:2181 confluentinc/cp-zookeeper:latest
+
+docker run -d --name kafka -p 9092:9092 \
+  -e KAFKA_BROKER_ID=1 \
+  -e KAFKA_ZOOKEEPER_CONNECT=172.17.0.2:2181 \
+  -e KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://172.17.0.3:9092 \
+  -e KAFKA_LISTENER_SECURITY_PROTOCOL_MAP=PLAINTEXT:PLAINTEXT \
+  -e KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR=1 \
+  -e KAFKA_AUTO_CREATE_TOPICS_ENABLE=true \
+  confluentinc/cp-kafka:latest
 ```
 
 So‘ng brokerni ishga tushiring va 9092 port ochiq ekanligiga ishonch hosil qiling.
@@ -94,6 +112,15 @@ docker run -d -p 5672:5672 -p 15672:15672 --name rabbitmq rabbitmq:3-management
 
 Web UI: [http://localhost:15672](http://localhost:15672)  (login: guest / guest)
 
+### Nats
+
+Agar Docker orqali Nats o'rnatmoqchi bo‘lsangiz:
+
+```bash
+docker pull nats:latest
+```
+
+So‘ng brokerni ishga tushiring.
 ---
 
 ## ✉️ Email Namuna

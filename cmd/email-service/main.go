@@ -31,7 +31,9 @@ func main() {
 	if cfg.BrokerType == "rabbit" {
 		runRabbitMQ(cfg.RabbitMQURL, sender)
 	} else if cfg.BrokerType == "kafka" {
-		runKafka("localhost:9092", "email-topic", "email-group", sender)
+		runKafka(sender)
+	} else if cfg.BrokerType == "nats" {
+		runNats(cfg.NatsURL, "email-subject", sender) // NATS URL va subject
 	} else {
 		log.Fatalf("Noto‘g‘ri broker turi: %s", cfg.BrokerType)
 	}
@@ -63,6 +65,32 @@ func runRabbitMQ(rabbitURL string, sender *email.EmailSender) {
 	select {}
 }
 
-func runKafka(brokerAddr, topic, groupID string, sender *email.EmailSender) {
+func runKafka(sender *email.EmailSender) {
 	broker.StartKafkaListener(sender)
+}
+
+func runNats(natsURL, subject string, sender *email.EmailSender) {
+	consumer, err := broker.NewNatsConsumer(natsURL, subject)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer consumer.Close()
+
+	err = consumer.ConsumeMessages(func(body []byte) {
+		var payload EmailPayload
+		if err := json.Unmarshal(body, &payload); err != nil {
+			log.Println("❌ JSON xato:", err)
+			return
+		}
+		if err := sender.Send(payload.To, payload.Subject, payload.Body); err != nil {
+			log.Println("❌ Email yuborilmadi:", err)
+		} else {
+			fmt.Println("✅ Email sent to", payload.To)
+		}
+	})
+
+	if err != nil {
+		log.Fatal(err)
+	}
+	select {} // Dastur to‘xtamasligi uchun
 }

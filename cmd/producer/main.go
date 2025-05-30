@@ -8,6 +8,7 @@ import (
 	"log"
 	"time"
 
+	"github.com/nats-io/nats.go"
 	"github.com/segmentio/kafka-go"
 	"github.com/streadway/amqp"
 )
@@ -19,8 +20,8 @@ type EmailPayload struct {
 }
 
 func main() {
-	// Broker flag (rabbit yoki kafka)
-	broker := flag.String("broker", "rabbit", "Email broker: rabbit or kafka")
+	// Broker flag (rabbit, kafka, yoki nats)
+	broker := flag.String("broker", "rabbit", "Email broker: rabbit, kafka, or nats")
 	flag.Parse()
 
 	cfg, err := config.Load()
@@ -41,8 +42,10 @@ func main() {
 		sendViaRabbit(cfg.RabbitMQURL, payload)
 	case "kafka":
 		sendViaKafka(payload)
+	case "nats":
+		sendViaNats("nats://localhost:4222", "email-subject", payload)
 	default:
-		log.Fatal("Noto‘g‘ri broker: rabbit yoki kafka bo‘lishi kerak")
+		log.Fatal("❌ Noto‘g‘ri broker turi: rabbit, kafka yoki nats bo‘lishi kerak")
 	}
 }
 
@@ -96,4 +99,22 @@ func sendViaKafka(payload EmailPayload) {
 	}
 
 	log.Println("📤 Kafka orqali email yuborildi.")
+}
+
+// ✅ NATS orqali yuborish
+func sendViaNats(natsURL, subject string, payload EmailPayload) {
+	nc, err := nats.Connect(natsURL)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer nc.Close()
+
+	body, _ := json.Marshal(payload)
+
+	err = nc.Publish(subject, body)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	log.Println("📤 NATS orqali email yuborildi.")
 }
